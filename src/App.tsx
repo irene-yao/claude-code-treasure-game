@@ -13,6 +13,7 @@ import { useAuth } from "./context/AuthContext";
 import { api } from "./lib/api";
 import closedChest from "./assets/treasure_closed.png";
 import treasureChest from "./assets/treasure_opened.png";
+import emptyChest from "./assets/treasure_empty.png";
 import skeletonChest from "./assets/treasure_opened_skeleton.png";
 import chestOpenSound from "./audios/chest_open.mp3";
 import evilLaughSound from "./audios/chest_open_with_evil_laugh.mp3";
@@ -21,7 +22,7 @@ import keyIcon from "./assets/key.png";
 interface Box {
   id: number;
   isOpen: boolean;
-  hasTreasure: boolean;
+  value: number; // 100, 0, or -100
 }
 
 export default function App() {
@@ -33,11 +34,11 @@ export default function App() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   const initializeGame = () => {
-    const treasureBoxIndex = Math.floor(Math.random() * 3);
+    const values = [100, 0, -100].sort(() => Math.random() - 0.5);
     const newBoxes: Box[] = Array.from({ length: 3 }, (_, index) => ({
       id: index,
       isOpen: false,
-      hasTreasure: index === treasureBoxIndex,
+      value: values[index],
     }));
 
     setBoxes(newBoxes);
@@ -56,19 +57,14 @@ export default function App() {
     setBoxes((prevBoxes) => {
       const updatedBoxes = prevBoxes.map((box) => {
         if (box.id === boxId && !box.isOpen) {
-          new Audio(box.hasTreasure ? chestOpenSound : evilLaughSound).play();
-          const newScore = box.hasTreasure ? score + 200 : score - 100;
-          setScore(newScore);
+          new Audio(box.value > 0 ? chestOpenSound : evilLaughSound).play();
+          setScore(box.value);
           return { ...box, isOpen: true };
         }
         return box;
       });
 
-      const treasureFound = updatedBoxes.some(
-        (box) => box.isOpen && box.hasTreasure,
-      );
-      const allOpened = updatedBoxes.every((box) => box.isOpen);
-      if (treasureFound || allOpened) {
+      if (updatedBoxes.some((box) => box.isOpen)) {
         setGameEnded(true);
         setShowDialog(true);
       }
@@ -149,7 +145,7 @@ export default function App() {
           Click on the treasure chests to discover what's inside!
         </p>
         <p className="text-amber-700 text-sm">
-          💰 Treasure: +$200 | 💀 Skeleton: -$100
+          💰 Treasure: +$100 | 📦 Empty: $0 | 💀 Skeleton: -$100
         </p>
       </div>
 
@@ -189,16 +185,20 @@ export default function App() {
               <img
                 src={
                   box.isOpen
-                    ? box.hasTreasure
+                    ? box.value > 0
                       ? treasureChest
-                      : skeletonChest
+                      : box.value === 0
+                        ? emptyChest
+                        : skeletonChest
                     : closedChest
                 }
                 alt={
                   box.isOpen
-                    ? box.hasTreasure
+                    ? box.value > 0
                       ? "Treasure!"
-                      : "Skeleton!"
+                      : box.value === 0
+                        ? "Empty!"
+                        : "Skeleton!"
                     : "Treasure Chest"
                 }
                 className="w-48 h-48 object-contain drop-shadow-lg"
@@ -211,8 +211,10 @@ export default function App() {
                   transition={{ delay: 0.3, duration: 0.5 }}
                   className="absolute -top-8 left-1/2 transform -translate-x-1/2"
                 >
-                  {box.hasTreasure ? (
+                  {box.value > 0 ? (
                     <div className="text-2xl animate-bounce">✨💰✨</div>
+                  ) : box.value === 0 ? (
+                    <div className="text-2xl animate-pulse">📦💨📦</div>
                   ) : (
                     <div className="text-2xl animate-pulse">💀👻💀</div>
                   )}
@@ -227,12 +229,14 @@ export default function App() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.3 }}
                   className={`text-lg p-2 rounded-lg ${
-                    box.hasTreasure
+                    box.value > 0
                       ? "bg-green-100 text-green-800 border border-green-300"
-                      : "bg-red-100 text-red-800 border border-red-300"
+                      : box.value === 0
+                        ? "bg-gray-100 text-gray-700 border border-gray-300"
+                        : "bg-red-100 text-red-800 border border-red-300"
                   }`}
                 >
-                  {box.hasTreasure ? "+$200" : "-$100"}
+                  {box.value > 0 ? "+$100" : box.value === 0 ? "$0" : "-$100"}
                 </motion.div>
               ) : (
                 <div className="text-amber-700 p-2">Click to open!</div>
@@ -248,13 +252,13 @@ export default function App() {
             <DialogTitle
               className={`text-4xl font-bold text-center ${
                 score > 0
-                  ? "text-red-600"
+                  ? "text-green-600"
                   : score === 0
                     ? "text-blue-600"
-                    : "text-green-600"
+                    : "text-red-600"
               }`}
             >
-              {score > 0 ? "WIN" : score === 0 ? "TIE" : "LOSE"}
+              {score > 0 ? "WIN" : score === 0 ? "EMPTY" : "LOSE"}
             </DialogTitle>
           </DialogHeader>
           <p className="text-lg text-amber-800">
@@ -264,9 +268,11 @@ export default function App() {
             </span>
           </p>
           <p className="text-sm text-amber-600">
-            {boxes.some((box) => box.isOpen && box.hasTreasure)
+            {score > 0
               ? "Treasure found! Well done, treasure hunter! 🎉"
-              : "No treasure found this time! Better luck next time! 💀"}
+              : score === 0
+                ? "Nothing inside... try again! 📦"
+                : "A skeleton! Better luck next time! 💀"}
           </p>
           {user && (
             <p className="text-xs text-amber-500">Score saved to your account.</p>

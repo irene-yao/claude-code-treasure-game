@@ -31,7 +31,7 @@ Run: `gh repo create <repo-name> --public --source=. --remote=origin --push`
 Tell the user:
 > GitHub CLI (`gh`) is not installed. Please either:
 > 1. Install it from https://cli.github.com and run `/deploy_github` again, OR
-> 2. Manually create a repo at https://github.com/new, then run:
+> 2. Log in at https://github.com/login, then manually create a repo at https://github.com/new, then run:
 >    ```
 >    git remote add origin https://github.com/<your-username>/<repo-name>.git
 >    git branch -M main
@@ -212,6 +212,6 @@ After deployment completes, report to the user:
 
 - NEVER commit `.env` files or any file containing secrets
 - NEVER force-push without explicit user confirmation
-- If `gh` auth is required but not set up, instruct: `! gh auth login`
+- If `gh` auth is required but not set up, instruct the user to run `! gh auth login` — this opens a browser. If the browser does not open automatically, they can go to https://github.com/login manually
 - Always show the user the final GitHub URL on success
 - The `build/` directory must be listed in `.gitignore` — the gh-pages package handles publishing it separately; do NOT commit the build output to the source branch
